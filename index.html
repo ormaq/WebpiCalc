@@ -17,6 +17,7 @@
     <div id="Nilakantha">3.14</div>
     <div id="Machin">3.14</div>
     <div id="bigx">3.14</div>
+    <div id="IntegralMethod">3.14</div>
     <div id="arcsin">3.14</div>
     <div id="kmod">3.14</div>
     <div id="bbp">3.14</div>
@@ -25,7 +26,7 @@
     <script>
         let Pi100 = '3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067';
 
-        const workernames = ["Leibniz", "Monte-Carlo", "Nilakantha", "Machin", "bigx", "arcsin", "kmod" , "bbp", "wallis"];
+        const workernames = ["Leibniz", "Monte-Carlo", "Nilakantha", "Machin", "bigx", "arcsin", "kmod" , "bbp", "wallis", "IntegralMethod"];
 
         let workers = [],
             estimating = false,
@@ -51,6 +52,8 @@
                 return 7;
             else if (name == "wallis")
                 return 8;
+            else if (name == "IntegralMethod")
+                return 9;
         }
 
 
