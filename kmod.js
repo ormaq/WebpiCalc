@@ -1,56 +1,60 @@
+// kmod.js
+
 importScripts('https://cdnjs.cloudflare.com/ajax/libs/big.js/6.1.1/big.min.js');
 
-let estimatingChudnovsky = false;
-let intervalIdChudnovsky;
+let estimating = false;
+let intervalId;
 
+let piInverse = new Big(0);
+let k = 0;
 
-let k1 = new Big(545140134);
-let k2 = new Big(13591409);
-let k3 = new Big(640320);
-let k4 = new Big(100100025);
-let k5 = new Big(327843840);
-let k6 = new Big(53360);
-let sqrtK3 = k3.sqrt();
+const factorialCache = { '0': new Big(1), '1': new Big(1) };
 
 function factorial(n) {
-  let result = new Big(1);
-  for (let i = 1; i <= n; i++) {
-    result = result.times(i);
-  }
-  return result;
+    if (factorialCache[n]) return factorialCache[n];
+    let result = factorialCache[n - 1];
+    result = result.times(n);
+    factorialCache[n] = result;
+    return result;
 }
-
-function calculateS() {
-  let sum = new Big(0);
-  for (let i = 0; i <= 50; i++) {
-    let num = (new Big(-1).pow(i)).times(factorial(6 * i)).times(k2.add(i * k1));
-    let den = (factorial(i).pow(3)).times(factorial(3 * i)).times((new Big(8).times(k4).times(k5)).pow(i));
-    sum = sum.plus(num.div(den));
-  }
-  return sum;
-}
-
 
 function estimatePiChudnovsky() {
-  let S = calculateS();
-  let pi = (k6.times(sqrtK3)).div(S);
-  let piEstimation = pi.toFixed(100);
+    const iterationsPerLoop = 1; // Due to heavy computation
+    for (let count = 0; count < iterationsPerLoop; count++, k++) {
+        const kBig = new Big(k);
+        const numerator = factorial(6 * k)
+            .times(new Big(13591409).plus(new Big(545140134).times(kBig)));
+        const denominator = factorial(3 * k)
+            .times(factorial(k).pow(3))
+            .times(new Big(-640320).pow(3 * k));
+        const term = numerator.div(denominator);
 
-  self.postMessage({ throws: 1, piEstimation: piEstimation, method: 'kmod' });
+        piInverse = piInverse.plus(term);
+    }
+
+    const C = new Big(426880).times(new Big(10005).sqrt());
+    const piEstimation = C.div(piInverse);
+
+    self.postMessage({
+        throws: iterationsPerLoop,
+        piEstimation: piEstimation.toFixed(100),
+        method: "kmod"
+    });
 }
 
 self.addEventListener("message", (event) => {
-  const { command } = event.data;
-  if (command === "start") {
-    if (estimatingChudnovsky) return;
-    estimatingChudnovsky = true;
-
-    estimatePiChudnovsky();
-
-  } else if (command === "stop") {
-    if (!estimatingChudnovsky) return;
-
-    estimatingChudnovsky = false;
-    clearInterval(intervalIdChudnovsky);
-  }
+    const { command } = event.data;
+    if (command === "start") {
+        if (estimating) return;
+        estimating = true;
+        k = 0;
+        piInverse = new Big(0);
+        intervalId = setInterval(() => {
+            estimatePiChudnovsky();
+        }, 1000); // Longer interval due to heavy computation
+    } else if (command === "stop") {
+        if (!estimating) return;
+        estimating = false;
+        clearInterval(intervalId);
+    }
 });

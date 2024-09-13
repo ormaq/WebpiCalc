@@ -22,88 +22,93 @@
     <div id="kmod">3.14</div>
     <div id="bbp">3.14</div>
     <div id="wallis">3.14</div>
+    <div id="Ramanujan">3.14</div>
+    <div id="Euler">3.14</div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/big.js/6.1.1/big.min.js"></script>
     <script>
-        let Pi100 = '3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067';
+    let Pi100 = '3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067';
 
-        const workernames = ["Leibniz", "Monte-Carlo", "Nilakantha", "Machin", "bigx", "arcsin", "kmod" , "bbp", "wallis", "IntegralMethod"];
+const workernames = [
+    "Leibniz",
+    "Monte-Carlo",
+    "Nilakantha",
+    "Machin",
+    "bigx",
+    "arcsin",
+    "kmod",
+    "bbp",
+    "wallis",
+    "IntegralMethod",
+    "Ramanujan",
+    "Euler"
+];
 
-        let workers = [],
-            estimating = false,
-            iterations = new Array(workernames.length).fill(0),
-            totalpi = new Array(workernames.length).fill(0);
 
-        function getposbyname(name) {
-            if (name == "Leibniz")
-                return 0;
-            else if (name == "Monte-Carlo")
-                return 1;
-            else if (name == "Nilakantha")
-                return 2;
-            else if (name == "Machin")
-                return 3;
-            else if (name == "bigx")
-                return 4;
-            else if (name == "arcsin")
-                return 5;
-            else if (name == "kmod")
-                return 6;
-            else if (name == "bbp")
-                return 7;
-            else if (name == "wallis")
-                return 8;
-            else if (name == "IntegralMethod")
-                return 9;
+let workers = [],
+    estimating = false,
+    iterations = new Array(workernames.length).fill(0),
+    totalpi = new Array(workernames.length).fill(0);
+
+function getposbyname(name) {
+    return workernames.indexOf(name);
+}
+
+
+
+function handleWorkerMessage(event) {
+    const {
+        throws,
+        piEstimation,
+        method
+    } = event.data;
+    let pos = getposbyname(method);
+    iterations[pos] += throws;
+    totalpi[pos] = piEstimation.toString();
+
+    const output = document.getElementById(method),
+        formatted = new Intl.NumberFormat().format(iterations[pos]);
+
+    const coloredEstimation = colorizeDigits(totalpi[pos]);
+
+    output.innerHTML = method + ', iterations: ' + formatted + '\n Current Pi estimation: ' + coloredEstimation;
+}
+
+function colorizeDigits(estimate) {
+    let coloredDigits = '';
+    for (let i = 0; i < estimate.length; i++) {
+        if (estimate[i] === Pi100[i])
+            coloredDigits += `<mark style ="background-color: #52D452">${estimate[i]}</mark>`;
+        else
+            coloredDigits += `<mark style ="background-color: #FFA66B">${estimate[i]}</mark>`;
+    }
+    return coloredDigits;
+}
+
+
+function toggleEstimation() {
+    if (!estimating) {
+        for (let i = 0; i < workernames.length; i++) {
+            const worker = new Worker(workernames[i] + ".js");
+            worker.onmessage = handleWorkerMessage;
+            worker.postMessage({
+                command: "start"
+            });
+            workers.push(worker);
         }
-
-
-        function handleWorkerMessage(event) {
-            const { throws, piEstimation, method } = event.data;
-            let pos = getposbyname(method);
-            iterations[pos] += throws;
-            totalpi[pos] = piEstimation.toString();
-
-            const output = document.getElementById(method),
-                formatted = new Intl.NumberFormat().format(iterations[pos]);
-
-            const coloredEstimation = colorizeDigits(totalpi[pos]);
-
-            output.innerHTML = method + ', iterations: ' + formatted + '\n Current Pi estimation: ' + coloredEstimation;
+        estimating = true;
+        document.querySelector("button").textContent = "Stop Estimation";
+    } else {
+        for (const worker of workers) {
+            worker.postMessage({
+                command: "stop"
+            });
+            worker.terminate();
         }
-
-        function colorizeDigits(estimate) {
-            let coloredDigits = '';
-            for (let i = 0; i < estimate.length; i++) {
-                if (estimate[i] === Pi100[i])
-                    coloredDigits += `<mark style ="background-color: #52D452">${estimate[i]}</mark>`;
-                else
-                    coloredDigits += `<mark style ="background-color: #FFA66B">${estimate[i]}</mark>`;
-            }
-            return coloredDigits;
-        }
-
-
-        function toggleEstimation() {
-            if (!estimating) {
-                for (let i = 0; i < workernames.length; i++) {
-                    const worker = new Worker(workernames[i] + ".js");
-                    worker.onmessage = handleWorkerMessage;
-                    worker.postMessage({ command: "start" });
-                    workers.push(worker);
-                }
-                estimating = true;
-                document.querySelector("button").textContent = "Stop Estimation";
-            } else {
-                for (const worker of workers) {
-                    worker.postMessage({ command: "stop" });
-                    worker.terminate();
-                }
-                workers = [];
-                estimating = false;
-                document.querySelector("button").textContent = "Start Estimation";
-            }
-        }
-
+        workers = [];
+        estimating = false;
+        document.querySelector("button").textContent = "Start Estimation";
+    }
+}
     </script>
 </body>
 
